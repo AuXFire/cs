@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SteamUser {
+  id          String   @id @default(cuid())
+  steamId     String   @unique
+  avatarUrl   String
+  personaName String
+  realName    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  coins       Float    @default(0)
+  bets        Bet[]
+}
+
+model Bet {
+  id          String    @id @default(cuid())
+  steamUser   SteamUser @relation(fields: [steamUserId], references: [id])
+  steamUserId String
+  amount      Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model LoginLink {
+  id          String   @id @default(cuid())
+  steamUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
