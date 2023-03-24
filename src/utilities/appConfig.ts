@@ -18,8 +18,9 @@ const config: IConfig = {
   },
   baseUrl: BASEURL || configLoadedFromJSON.baseUrl,
   webTokenSecret:
-    // require("crypto").randomBytes(64).toString("hex") ||
-    SECRET || configLoadedFromJSON.webTokenSecret,
+    require("crypto").randomBytes(64).toString("hex") ||
+    SECRET ||
+    configLoadedFromJSON.webTokenSecret,
   developerMode:
     (DEVELOPERMODE?.toLowerCase() || "false") === "true" ||
     configLoadedFromJSON.developerMode ||
