@@ -1,4 +1,4 @@
-# RR - Counter-Strike Gambling Site 🤹‍♂️
+# Retrac - Counter-Strike Gambling Site 🤹‍♂️
 Full source code for a counter-strike gambling websit that includes roulette and coinflips. Very small file sizes and high performance.
 - **React** frontend
 - **Postgresql** storing data
