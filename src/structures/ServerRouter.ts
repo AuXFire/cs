@@ -23,6 +23,7 @@ export default class ServerRouter {
         origin: "*",
       })
     );
+    this.app.get("/", (req, res) => res.send("SITE IS UNDER DEVELOPMENT"));
     this.app.use("/api", this.router);
     this.app.get("/*", (req, res) => {
       res.sendFile(join(__dirname, "..", "dist", "index.html"));
