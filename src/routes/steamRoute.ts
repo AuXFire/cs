@@ -3,6 +3,7 @@ import { steam } from "..";
 import { ISteamUser } from "../utilities/types";
 import * as prismaHelper from "../utilities/prisma";
 import * as errorCodes from "../utilities/errorCodes";
+import config from "../utilities/appConfig";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get("/auth", async (req, res) => {
 
   const token = await prismaHelper.tokenSteamUser(dbUser.steamId);
 
-  return res.redirect(`http://localhost:5173/login?d=${token.token}`);
+  return res.redirect(`${config.baseUrl}/login?d=${token.token}`);
 });
 
 export default {
