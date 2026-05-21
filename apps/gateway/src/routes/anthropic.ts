@@ -1,4 +1,4 @@
-import type { RequestLogInput, RequestStatus } from "@codemesh/core";
+import { computeCostUsdMicros, type RequestLogInput, type RequestStatus } from "@codemesh/core";
 import { anthropicAdapter } from "@codemesh/providers";
 import type { Context, Handler } from "hono";
 import { getAuth } from "../middleware/auth.js";
@@ -280,18 +280,28 @@ function logUsage(args: {
   usage: { inputTokens: number; outputTokens: number; cachedInputTokens: number } | null;
   modelUsed: string | null;
 }): void {
+  const modelUsed = args.modelUsed ?? args.modelRequested;
+  const inputTokens = args.usage?.inputTokens ?? 0;
+  const outputTokens = args.usage?.outputTokens ?? 0;
+  const cachedInputTokens = args.usage?.cachedInputTokens ?? 0;
+
   const entry: RequestLogInput = {
     tenantId: args.tenantId,
     apiKeyId: args.apiKeyId,
     provider: "anthropic",
     modelRequested: args.modelRequested,
-    modelUsed: args.modelUsed ?? args.modelRequested,
+    modelUsed,
     team: args.team,
     feature: args.feature,
-    inputTokens: args.usage?.inputTokens ?? 0,
-    outputTokens: args.usage?.outputTokens ?? 0,
-    cachedInputTokens: args.usage?.cachedInputTokens ?? 0,
-    costUsdMicros: BigInt(0),
+    inputTokens,
+    outputTokens,
+    cachedInputTokens,
+    costUsdMicros: computeCostUsdMicros({
+      model: modelUsed,
+      inputTokens,
+      outputTokens,
+      cachedInputTokens,
+    }),
     latencyMs: args.latencyMs,
     status: args.status,
     requestHash: null,

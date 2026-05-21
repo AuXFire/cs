@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   customType,
   index,
   integer,
@@ -136,6 +137,7 @@ export const requestLogs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    rolledUpAt: timestamp("rolled_up_at", { withTimezone: true }),
   },
   (t) => ({
     tenantCreatedIdx: index("request_logs_tenant_created_idx").on(
@@ -151,6 +153,9 @@ export const requestLogs = pgTable(
       t.requestHash,
       t.createdAt,
     ),
+    unrolledIdx: index("request_logs_unrolled_idx")
+      .on(t.createdAt)
+      .where(sql`${t.rolledUpAt} IS NULL`),
   }),
 );
 
@@ -173,6 +178,114 @@ export const interventions = pgTable(
   }),
 );
 
+// Hourly rollups for fast dashboard queries. team/feature are part of the PK,
+// so they are NOT NULL with '' meaning "unattributed" (NULLs can't be compared
+// in a primary key, which would break upserts).
+export const spendBuckets = pgTable(
+  "spend_buckets",
+  {
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    hour: timestamp("hour", { withTimezone: true }).notNull(),
+    team: text("team").notNull().default(""),
+    feature: text("feature").notNull().default(""),
+    provider: providerEnum("provider").notNull(),
+    model: text("model").notNull(),
+    requestCount: integer("request_count").notNull().default(0),
+    inputTokens: bigint("input_tokens", { mode: "bigint" })
+      .notNull()
+      .default(sql`0`),
+    outputTokens: bigint("output_tokens", { mode: "bigint" })
+      .notNull()
+      .default(sql`0`),
+    cachedInputTokens: bigint("cached_input_tokens", { mode: "bigint" })
+      .notNull()
+      .default(sql`0`),
+    costUsdMicros: bigint("cost_usd_micros", { mode: "bigint" })
+      .notNull()
+      .default(sql`0`),
+    savingsUsdMicros: bigint("savings_usd_micros", { mode: "bigint" })
+      .notNull()
+      .default(sql`0`),
+  },
+  (t) => ({
+    pk: primaryKey({
+      columns: [t.tenantId, t.hour, t.team, t.feature, t.provider, t.model],
+    }),
+    tenantHourIdx: index("spend_buckets_tenant_hour_idx").on(
+      t.tenantId,
+      t.hour,
+    ),
+  }),
+);
+
+export const routingActionEnum = pgEnum("routing_action", [
+  "route_to_cheaper",
+  "block",
+  "alert",
+]);
+
+export const routingRules = pgTable(
+  "routing_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    enabled: boolean("enabled").notNull().default(false),
+    matchTeam: text("match_team"),
+    matchFeature: text("match_feature"),
+    matchModel: text("match_model"),
+    action: routingActionEnum("action").notNull(),
+    targetModel: text("target_model"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index("routing_rules_tenant_idx").on(t.tenantId),
+  }),
+);
+
+export const cachePrefixes = pgTable(
+  "cache_prefixes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    prefixHash: text("prefix_hash").notNull(),
+    tokenCount: integer("token_count").notNull(),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    hitCount: integer("hit_count").notNull().default(0),
+    cacheControlInserted: boolean("cache_control_inserted")
+      .notNull()
+      .default(false),
+  },
+  (t) => ({
+    tenantPrefixIdx: index("cache_prefixes_tenant_prefix_idx").on(
+      t.tenantId,
+      t.prefixHash,
+    ),
+  }),
+);
+
+export const dedupCache = pgTable("dedup_cache", {
+  requestHash: text("request_hash").primaryKey(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  responseBody: jsonb("response_body").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;
@@ -183,3 +296,11 @@ export type RequestLog = typeof requestLogs.$inferSelect;
 export type NewRequestLog = typeof requestLogs.$inferInsert;
 export type Intervention = typeof interventions.$inferSelect;
 export type NewIntervention = typeof interventions.$inferInsert;
+export type SpendBucket = typeof spendBuckets.$inferSelect;
+export type NewSpendBucket = typeof spendBuckets.$inferInsert;
+export type RoutingRule = typeof routingRules.$inferSelect;
+export type NewRoutingRule = typeof routingRules.$inferInsert;
+export type CachePrefix = typeof cachePrefixes.$inferSelect;
+export type NewCachePrefix = typeof cachePrefixes.$inferInsert;
+export type DedupCacheRow = typeof dedupCache.$inferSelect;
+export type NewDedupCacheRow = typeof dedupCache.$inferInsert;

@@ -136,6 +136,8 @@ describe("non-streaming proxy", () => {
       cachedInputTokens: 30,
       status: "success",
     });
+    // (70*3 + 30*0.3 + 50*15) / 1e6 USD = 969 micros
+    expect(captured[0]?.costUsdMicros).toBe(969n);
   });
 
   it("returns 502 when the provider key is missing", async () => {

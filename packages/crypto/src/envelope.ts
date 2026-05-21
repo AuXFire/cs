@@ -39,8 +39,10 @@ export async function encryptProviderKey(
 
 export async function decryptProviderKey(
   kms: Kms,
-  blob: Buffer,
+  blobInput: Buffer | Uint8Array,
 ): Promise<string> {
+  // postgres-js returns bytea as Buffer; pglite returns Uint8Array.
+  const blob = Buffer.isBuffer(blobInput) ? blobInput : Buffer.from(blobInput);
   if (blob.length < DEK_LEN_BYTES) {
     throw new Error("encrypted blob too short");
   }
