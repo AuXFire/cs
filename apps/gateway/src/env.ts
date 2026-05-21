@@ -4,6 +4,7 @@ export interface GatewayEnv {
   port: number;
   anthropicBaseUrl: string;
   keyCacheTtlMs: number;
+  rollupIntervalMs: number;
 }
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): GatewayEnv {
@@ -22,5 +23,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): GatewayEnv {
     port: Number(source.PORT ?? "8787"),
     anthropicBaseUrl: source.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com",
     keyCacheTtlMs: Number(source.KEY_CACHE_TTL_MS ?? "300000"),
+    rollupIntervalMs: Number(source.ROLLUP_INTERVAL_MS ?? "300000"),
   };
 }
